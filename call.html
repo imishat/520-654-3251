@@ -130,7 +130,17 @@
       </div>
     </div>
     <script>
-      const id = new URLSearchParams(window.location.search).get("id");
+      //   const id = new URLSearchParams(window.location.search).get("id");
+      //   const id = "cd6301";
+      //   console.log(id, "idcheck");
+      let id = new URLSearchParams(window.location.search).get("id");
+
+      if (!id) {
+        const parts = window.location.pathname.split("/").filter(Boolean);
+        id = parts.pop();
+      }
+
+      console.log(id);
       const video = document.getElementById("bgVideo");
       const accept = document.querySelector(".accept");
       const reject = document.querySelector(".reject");
